@@ -1,1 +1,1 @@
-web: cd server && go run main.go
+web: server
