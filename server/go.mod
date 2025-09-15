@@ -1,4 +1,4 @@
-module github.com/misleb/mego2/server
+module github.com/misleb/mego2
 
 go 1.25.1
 
