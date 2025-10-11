@@ -3,95 +3,13 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gofred-io/gofred/application"
-	"github.com/gofred-io/gofred/breakpoint"
-	"github.com/gofred-io/gofred/foundation/button"
-	"github.com/gofred-io/gofred/foundation/column"
-	"github.com/gofred-io/gofred/foundation/container"
-	"github.com/gofred-io/gofred/foundation/row"
-	"github.com/gofred-io/gofred/foundation/spacer"
-	"github.com/gofred-io/gofred/foundation/text"
-	"github.com/gofred-io/gofred/hooks"
-	"github.com/gofred-io/gofred/listenable"
-	"github.com/gofred-io/gofred/options/spacing"
-	"github.com/gofred-io/gofred/widget"
-
-	"github.com/misleb/mego2/app/client"
-)
-
-var (
-	count, setCount    = hooks.UseState(0)
-	errorMsg, setError = hooks.UseState("")
+	"github.com/gofred-io/gofred/foundation/router"
+	"github.com/misleb/mego2/app/pages/home"
 )
 
 func main() {
-	app := createApp()
-	application.Run(app)
-}
-
-func createApp() widget.BaseWidget {
-	return container.New(
-		column.New(
-			[]widget.BaseWidget{
-				listenable.Builder(errorMsg, func() widget.BaseWidget {
-					return text.New(
-						errorMsg.Value(),
-						text.FontSize(24),
-						text.FontColor("#FF0000"),
-					)
-				}),
-				text.New(
-					"Counter App",
-					text.FontSize(24),
-					text.FontColor("#1F2937"),
-					text.FontWeight("700"),
-				),
-				listenable.Builder(count, func() widget.BaseWidget {
-					return text.New(
-						fmt.Sprintf("Count: %d", count.Value()),
-						text.FontSize(18),
-						text.FontColor("#2B799B"),
-						text.FontWeight("600"),
-					)
-				}),
-				spacer.New(spacer.Height(16)),
-				row.New(
-					[]widget.BaseWidget{
-						button.New(
-							text.New("Decrease", text.FontColor("#FFFFFF")),
-							button.BackgroundColor("#EF4444"),
-							button.OnClick(decreaseCount),
-						),
-						spacer.New(spacer.Width(16)),
-						button.New(
-							text.New("Increase", text.FontColor("#FFFFFF")),
-							button.BackgroundColor("#10B981"),
-							button.OnClick(increaseCount),
-						),
-					},
-					row.Gap(16),
-				),
-			},
-			column.Gap(16),
-		),
-		container.Padding(breakpoint.All(spacing.All(32))),
-		container.BackgroundColor("#FFFFFF"),
-	)
-}
-
-func increaseCount(this widget.BaseWidget, e widget.Event) {
-	apiClient := client.GetInstance()
-	result, err := apiClient.Increment(count.Value())
-	if err != nil {
-		setError(fmt.Sprintf("Error: %v", err))
-		return
-	}
-	setError("")
-	setCount(result.Result)
-}
-
-func decreaseCount(this widget.BaseWidget, e widget.Event) {
-	setCount(count.Value() - 1)
+	application.Run(router.New(
+		router.Route("/", home.New),
+	))
 }
