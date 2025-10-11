@@ -17,10 +17,13 @@ import (
 	"github.com/gofred-io/gofred/listenable"
 	"github.com/gofred-io/gofred/options/spacing"
 	"github.com/gofred-io/gofred/widget"
+
+	"github.com/misleb/mego2/app/client"
 )
 
 var (
-	count, setCount = hooks.UseState(0)
+	count, setCount    = hooks.UseState(0)
+	errorMsg, setError = hooks.UseState("")
 )
 
 func main() {
@@ -32,6 +35,13 @@ func createApp() widget.BaseWidget {
 	return container.New(
 		column.New(
 			[]widget.BaseWidget{
+				listenable.Builder(errorMsg, func() widget.BaseWidget {
+					return text.New(
+						errorMsg.Value(),
+						text.FontSize(24),
+						text.FontColor("#FF0000"),
+					)
+				}),
 				text.New(
 					"Counter App",
 					text.FontSize(24),
@@ -72,7 +82,14 @@ func createApp() widget.BaseWidget {
 }
 
 func increaseCount(this widget.BaseWidget, e widget.Event) {
-	setCount(count.Value() + 1)
+	apiClient := client.GetInstance()
+	result, err := apiClient.Increment(count.Value())
+	if err != nil {
+		setError(fmt.Sprintf("Error: %v", err))
+		return
+	}
+	setError("")
+	setCount(result.Result)
 }
 
 func decreaseCount(this widget.BaseWidget, e widget.Event) {
