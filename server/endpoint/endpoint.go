@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/gin-gonic/gin"
+	"github.com/misleb/mego2/server/store"
 	"github.com/misleb/mego2/shared"
 )
 
@@ -34,7 +35,7 @@ func authRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("X-Auth-Token")
 
-		if token != "currToken" {
+		if user := store.GetUserByToken(token); user == nil {
 			c.JSON(401, shared.LoginResponse{Error: "Unauthorized"})
 			c.Abort()
 			return

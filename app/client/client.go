@@ -1,3 +1,5 @@
+//go:build js && wasm
+
 package client
 
 import (
@@ -6,9 +8,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 	"sync"
 
+	"github.com/misleb/mego2/app/store"
 	"github.com/misleb/mego2/shared"
 )
 
@@ -46,7 +48,7 @@ func (c *APIClient) CallEndpoint(endpoint shared.Endpoint, request interface{}) 
 
 	// Replace path parameters if request has URI tags
 	if request != nil {
-		url = c.replacePathParams(url, request)
+		url = replacePathParams(url, request)
 	}
 
 	// Prepare the request body for POST/PUT
@@ -66,7 +68,12 @@ func (c *APIClient) CallEndpoint(endpoint shared.Endpoint, request interface{}) 
 	}
 
 	if endpoint.AuthRequired {
-		req.Header.Add("X-Auth-Token", "currToken")
+		if user := store.GetUser(); user != nil {
+			req.Header.Add("X-Auth-Token", user.Token)
+		} else {
+			return nil, fmt.Errorf("No user to get token from for athenticated request. Aborting.")
+		}
+
 	}
 
 	if body != nil {
@@ -103,46 +110,14 @@ func (c *APIClient) CallEndpoint(endpoint shared.Endpoint, request interface{}) 
 	return responseValue, nil
 }
 
-// replacePathParams replaces path parameters in URL with values from request
-func (c *APIClient) replacePathParams(url string, request interface{}) string {
-	requestValue := reflect.ValueOf(request)
-	requestType := reflect.TypeOf(request)
-
-	for i := 0; i < requestValue.NumField(); i++ {
-		field := requestType.Field(i)
-		value := requestValue.Field(i)
-
-		// Check for URI tag
-		if uriTag := field.Tag.Get("uri"); uriTag != "" {
-			paramValue := fmt.Sprintf("%v", value.Interface())
-			url = replaceParam(url, ":"+uriTag, paramValue)
-		}
-	}
-
-	return url
-}
-
-// replaceParam replaces a parameter placeholder in URL with actual value
-func replaceParam(url, param, value string) string {
-	// Simple replacement - you might want to use url.PathEscape for proper encoding
-	return strings.Replace(url, param, value, 1)
-}
-
 // Convenience methods for specific endpoints
+func (c *APIClient) Login(user string, pass string) (*shared.LoginResponse, error) {
+	request := shared.LoginRequest{Username: user, Password: pass}
+	return CallEndpointTyped[shared.LoginResponse](c, shared.LoginEndpoint, request)
+}
 
 // Increment calls the increment endpoint
 func (c *APIClient) Increment(value int) (*shared.IntResponse, error) {
 	request := shared.IntRequest{Value: value}
-	response, err := c.CallEndpoint(shared.IncEndpoint, request)
-	if err != nil {
-		return nil, err
-	}
-
-	// Type assert to the expected response type
-	intResp, ok := response.(*shared.IntResponse)
-	if !ok {
-		return nil, fmt.Errorf("unexpected response type")
-	}
-
-	return intResp, nil
+	return CallEndpointTyped[shared.IntResponse](c, shared.IncEndpoint, request)
 }

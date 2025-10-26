@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/misleb/mego2/server/endpoint"
+	"github.com/misleb/mego2/server/store"
 	"github.com/misleb/mego2/shared"
 )
 
@@ -71,10 +71,10 @@ func incHandler(c *gin.Context, param shared.IntRequest) {
 }
 
 func loginHandler(c *gin.Context, param shared.LoginRequest) {
-	if param.Username != "admin" || param.Password != "admin" {
+	token, err := store.GetTokenByUser(param.Username, param.Password)
+	if err != nil {
 		c.JSON(401, shared.LoginResponse{Error: "Invalid username or password"})
 		return
 	}
-	token := uuid.New().String()
 	c.JSON(200, shared.LoginResponse{Token: token})
 }
