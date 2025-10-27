@@ -2,14 +2,14 @@ module github.com/misleb/mego2
 
 go 1.25.1
 
-// +heroku install ./server
-
 require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gofred-io/gofred v0.0.6
 	github.com/google/uuid v1.6.0
 )
+
+// +heroku install ./server
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
