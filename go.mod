@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 )
 
-// +heroku install ./server/server
+// +heroku install ./server
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
