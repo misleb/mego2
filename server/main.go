@@ -30,8 +30,9 @@ func main() {
 		port = "8080"
 	}
 
-	// TODO don't start websocket server if in production
-	go runWebSocketServer()
+	if os.Getenv("ENV") != "production" {
+		go runWebSocketServer()
+	}
 
 	router.Run(":" + port)
 }

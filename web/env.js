@@ -1,3 +1,3 @@
 window.env = {
-	LIVE_PORT: 38919
+	LIVE_PORT: window.location.hostname === "localhost" ? 38919 : null
 }
