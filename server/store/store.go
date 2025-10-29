@@ -1,35 +1,77 @@
 package store
 
 import (
+	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 	"github.com/misleb/mego2/shared"
 )
 
-type userHash map[string]*shared.User
-type tokenHash map[string]*shared.User
-
 var (
-	allUsers = userHash{
-		"admin":  &shared.User{Name: "admin", Password: "admin"},
-		"misleb": &shared.User{Name: "misleb", Password: "kiavfd123"},
-	}
-	authenticatedUsers = make(tokenHash)
+	db *sql.DB
 )
 
+func InitDB() error {
+	databaseURL, ok := os.LookupEnv("DATABASE_URL")
+	if !ok {
+		return fmt.Errorf("no DATABASE_URL set")
+	}
+
+	var err error
+	db, err = sql.Open("postgres", databaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	return db.Ping()
+}
+
+func CloseDB() error {
+	if db != nil {
+		return db.Close()
+	}
+	return nil
+}
+
 func GetUserByToken(token string) *shared.User {
-	return authenticatedUsers[token]
+	query := `SELECT users.name, users.email FROM users LEFT JOIN tokens ON users.id = tokens.user_id WHERE tokens.token = $1`
+
+	var user shared.User
+
+	db.QueryRow(query, token).Scan(&user.Name, &user.Email)
+
+	return &user
 }
 
 func GetTokenByUser(name string, pass string) (string, error) {
-	if user, exists := allUsers[name]; exists {
-		if user.Password == pass {
-			token := uuid.New().String()
-			authenticatedUsers[token] = user
-			return token, nil
-		}
-		return "", fmt.Errorf("invalid password")
+	user, err := fetchUserAndToken(name, pass)
+	if err == nil {
+		return user.Token, nil
 	}
-	return "", fmt.Errorf("not found")
+	return "", err
+}
+
+func fetchUserAndToken(name string, pass string) (*shared.User, error) {
+	uQuery := `SELECT id, email, name FROM users WHERE name = $1 AND crypt($2, password) = password`
+	tQuery := `INSERT INTO tokens (token, user_id) VALUES ($1, $2) RETURNING id`
+
+	var user shared.User
+	var id int32
+
+	if err := db.QueryRow(uQuery, name, pass).Scan(&id, &user.Email, &user.Name); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	user.Token = uuid.New().String()
+
+	if err := db.QueryRow(tQuery, user.Token, id).Scan(&id); err != nil {
+		return nil, fmt.Errorf("could not create token: %w", err)
+	}
+	return &user, nil
 }

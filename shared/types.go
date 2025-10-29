@@ -1,5 +1,7 @@
 package shared
 
+type Password string
+
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -28,7 +30,7 @@ type Endpoint struct {
 }
 
 type User struct {
-	Name     string
-	Password string
-	Token    string
+	Name  string
+	Token string
+	Email string
 }

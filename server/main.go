@@ -19,6 +19,11 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
+	if err := store.InitDB(); err != nil {
+		log.Fatal("Failed to initialize db:", err)
+	}
+	defer store.CloseDB()
+
 	router := gin.Default()
 
 	endpoint.RegisterEndpoint(router, shared.IncEndpoint, incHandler)
@@ -33,6 +38,8 @@ func main() {
 	if os.Getenv("ENV") != "production" {
 		go runWebSocketServer()
 	}
+
+	log.Printf("Database URL: %s", os.Getenv("DATABASE_URL"))
 
 	router.Run(":" + port)
 }
@@ -74,6 +81,7 @@ func incHandler(c *gin.Context, param shared.IntRequest) {
 func loginHandler(c *gin.Context, param shared.LoginRequest) {
 	token, err := store.GetTokenByUser(param.Username, param.Password)
 	if err != nil {
+		log.Println("login error:", err)
 		c.JSON(401, shared.LoginResponse{Error: "Invalid username or password"})
 		return
 	}

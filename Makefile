@@ -25,3 +25,14 @@ run-wasm: wasm
 # Clean build artifacts
 clean:
 	rm -f web/main.wasm server
+
+# Add these to your Makefile
+migrate-up:
+	migrate -path server/migrations -database $(DATABASE_URL) up
+
+migrate-down:
+	migrate -path server/migrations -database $(DATABASE_URL) down
+
+migrate-force:
+	migrate -path server/migrations -database $(DATABASE_URL) force $(VERSION)
+	
