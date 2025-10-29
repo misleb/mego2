@@ -50,7 +50,7 @@ func doLogin(this application.BaseWidget, e application.Event) {
 	client := client.GetInstance()
 	result, err := client.Login(userInput.GetValue(), passInput.GetValue())
 	if err != nil {
-		console.Error(result.Error)
+		console.Error(err.Error())
 		return
 	}
 	store.SetUser(&shared.User{Name: userInput.GetValue(), Token: result.Token})
