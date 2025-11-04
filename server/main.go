@@ -98,7 +98,7 @@ func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
 		Code:         param.Code,
 		ClientID:     store.GoogleClientID,
 		ClientSecret: store.GoogleClientSecret,
-		RedirectURI:  "http://localhost:8080/google-callback.html",
+		RedirectURI:  store.BaseURI() + "/google-callback.html",
 		GrantType:    "authorization_code",
 	}
 

@@ -26,6 +26,13 @@ var (
 		}
 		return id
 	}()
+	BaseURI = func() string {
+		id, ok := os.LookupEnv("BASE_URI")
+		if !ok {
+			panic("BASE_URI is not set")
+		}
+		return id
+	}
 )
 
 func InitDB() error {
