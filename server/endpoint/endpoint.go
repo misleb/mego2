@@ -6,11 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/misleb/mego2/server/store"
-	"github.com/misleb/mego2/shared"
+	"github.com/misleb/mego2/shared/types"
 )
 
 // Generic endpoint registration function
-func RegisterEndpoint(router *gin.Engine, endpoint shared.Endpoint, handler interface{}) {
+func RegisterEndpoint(router *gin.Engine, endpoint types.Endpoint, handler interface{}) {
 	var handlerFuncs []gin.HandlerFunc
 
 	if endpoint.AuthRequired {
@@ -36,7 +36,7 @@ func authRequired() gin.HandlerFunc {
 		token := c.GetHeader("X-Auth-Token")
 
 		if user := store.GetUserByToken(token); user == nil {
-			c.JSON(401, shared.LoginResponse{Error: "Unauthorized"})
+			c.JSON(401, types.LoginResponse{Error: "Unauthorized"})
 			c.Abort()
 			return
 		}
@@ -44,7 +44,7 @@ func authRequired() gin.HandlerFunc {
 	}
 }
 
-func createHandler(endpoint shared.Endpoint, handler interface{}) gin.HandlerFunc {
+func createHandler(endpoint types.Endpoint, handler interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Create a new instance of the request type
 		requestType := reflect.TypeOf(endpoint.RequestType)
@@ -73,7 +73,7 @@ func createHandler(endpoint shared.Endpoint, handler interface{}) gin.HandlerFun
 	}
 }
 
-func sendErrorResponse(c *gin.Context, endpoint shared.Endpoint, err error) {
+func sendErrorResponse(c *gin.Context, endpoint types.Endpoint, err error) {
 	responseType := reflect.TypeOf(endpoint.ResponseType)
 	errorResponse := reflect.New(responseType).Interface()
 

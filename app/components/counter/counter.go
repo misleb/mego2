@@ -17,6 +17,7 @@ import (
 	"github.com/gofred-io/gofred/listenable"
 	"github.com/gofred-io/gofred/options/spacing"
 	"github.com/misleb/mego2/app/client"
+	"github.com/misleb/mego2/shared/api_client"
 )
 
 var (
@@ -75,8 +76,8 @@ func Get() application.BaseWidget {
 }
 
 func increaseCount(this application.BaseWidget, e application.Event) {
-	apiClient := client.GetInstance()
-	result, err := apiClient.Increment(count.Value())
+	apiClient := api_client.GetInstance()
+	result, err := apiClient.Increment(count.Value(), client.AddAuthHeader)
 	if err != nil {
 		setError(fmt.Sprintf("Error: %v", err))
 		return

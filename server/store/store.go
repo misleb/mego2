@@ -7,11 +7,25 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
-	"github.com/misleb/mego2/shared"
+	"github.com/misleb/mego2/shared/types"
 )
 
 var (
-	db *sql.DB
+	db                 *sql.DB
+	GoogleClientSecret = func() string {
+		secret, ok := os.LookupEnv("GOOGLE_CLIENT_SECRET")
+		if !ok {
+			panic("GOOGLE_CLIENT_SECRET is not set")
+		}
+		return secret
+	}()
+	GoogleClientID = func() string {
+		id, ok := os.LookupEnv("GOOGLE_CLIENT_ID")
+		if !ok {
+			panic("GOOGLE_CLIENT_ID is not set")
+		}
+		return id
+	}()
 )
 
 func InitDB() error {
@@ -36,13 +50,15 @@ func CloseDB() error {
 	return nil
 }
 
-func GetUserByToken(token string) *shared.User {
+func GetUserByToken(token string) *types.User {
 	query := `SELECT users.name, users.email FROM users LEFT JOIN tokens ON users.id = tokens.user_id WHERE tokens.token = $1`
 
-	var user shared.User
+	var user types.User
 
-	db.QueryRow(query, token).Scan(&user.Name, &user.Email)
-
+	err := db.QueryRow(query, token).Scan(&user.Name, &user.Email)
+	if err != nil {
+		return nil
+	}
 	return &user
 }
 
@@ -54,11 +70,11 @@ func GetTokenByUser(name string, pass string) (string, error) {
 	return "", err
 }
 
-func fetchUserAndToken(name string, pass string) (*shared.User, error) {
+func fetchUserAndToken(name string, pass string) (*types.User, error) {
 	uQuery := `SELECT id, email, name FROM users WHERE name = $1 AND crypt($2, password) = password`
 	tQuery := `INSERT INTO tokens (token, user_id) VALUES ($1, $2) RETURNING id`
 
-	var user shared.User
+	var user types.User
 	var id int32
 
 	if err := db.QueryRow(uQuery, name, pass).Scan(&id, &user.Email, &user.Name); err != nil {

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Auth Callback</title>
+</head>
+<body>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search)
+        const { error, code } = Object.fromEntries(urlParams.entries())
+        const msg = { type: error ? 'GOOGLE_AUTH_ERROR' : 'GOOGLE_AUTH_CODE', error, code }
+        window.opener.postMessage(msg, window.location.origin)
+        window.close()
+    </script>
+</body>
+</html>

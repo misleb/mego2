@@ -26,13 +26,14 @@ run-wasm: wasm
 clean:
 	rm -f web/main.wasm server
 
-# Add these to your Makefile
 migrate-up:
-	migrate -path server/migrations -database $(DATABASE_URL) up
+	@DATABASE_URL=$$(heroku config:get DATABASE_URL); \
+	migrate -path server/migrations -database $$DATABASE_URL up
 
 migrate-down:
-	migrate -path server/migrations -database $(DATABASE_URL) down
+	@DATABASE_URL=$$(heroku config:get DATABASE_URL); \
+	migrate -path server/migrations -database $$DATABASE_URL down
 
 migrate-force:
-	migrate -path server/migrations -database $(DATABASE_URL) force $(VERSION)
-	
+	@DATABASE_URL=$$(heroku config:get DATABASE_URL); \
+	migrate -path server/migrations -database $$DATABASE_URL force $(VERSION)

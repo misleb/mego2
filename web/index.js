@@ -31,6 +31,56 @@ function createWebsocketClient() {
   }
 }
 
+// Google OAuth configuration
+window.googleAuthConfig = {
+  clientId: window.env.GOOGLE_CLIENT_ID,
+  redirectUri: window.env.GOOGLE_REDIRECT_URI,
+};
+
+// Function to initiate Google OAuth login
+window.initiateGoogleAuth = function() {
+  const params = new URLSearchParams({
+    client_id: window.googleAuthConfig.clientId,
+    redirect_uri: window.googleAuthConfig.redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'consent',
+  });
+  
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  
+  // Open popup window for OAuth
+  const width = 500;
+  const height = 600;
+  const left = (window.screen.width - width) / 2;
+  const top = (window.screen.height - height) / 2;
+  
+  const popup = window.open(
+    authUrl,
+    'google-auth',
+    `width=${width},height=${height},left=${left},top=${top}`
+  );
+
+  return new Promise((resolve, reject) => {
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        reject(new Error('User closed the popup'));
+      }
+    }, 1000);
+    
+    // Listen for message from popup with auth code
+    window.addEventListener('message', function onMessage(event) {
+      if (event.data.type === 'GOOGLE_AUTH_CODE') {
+        window.removeEventListener('message', onMessage);
+        clearInterval(checkClosed);
+        resolve(event.data.code);
+      }
+    }, { once: true });
+  });
+};
+
 // A function to run after WebAssembly is instantiated.
 function postInstantiate(obj) {
   wasm = obj.instance;

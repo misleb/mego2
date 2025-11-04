@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -9,7 +10,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/misleb/mego2/server/endpoint"
 	"github.com/misleb/mego2/server/store"
-	"github.com/misleb/mego2/shared"
+	"github.com/misleb/mego2/shared/api_client"
+	"github.com/misleb/mego2/shared/types"
+	"google.golang.org/api/idtoken"
 )
 
 var upgrader = websocket.Upgrader{
@@ -26,8 +29,9 @@ func main() {
 
 	router := gin.Default()
 
-	endpoint.RegisterEndpoint(router, shared.IncEndpoint, incHandler)
-	endpoint.RegisterEndpoint(router, shared.LoginEndpoint, loginHandler)
+	endpoint.RegisterEndpoint(router, types.IncEndpoint, incHandler)
+	endpoint.RegisterEndpoint(router, types.LoginEndpoint, loginHandler)
+	endpoint.RegisterEndpoint(router, types.GoogleAuthEndpoint, googleAuthHandler)
 	router.NoRoute(gin.WrapH(http.FileServer(http.Dir("./web"))))
 
 	port, ok := os.LookupEnv("PORT")
@@ -74,16 +78,55 @@ func runWebSocketServer() {
 	router.Run(":38919") // Different port for WebSocket server
 }
 
-func incHandler(c *gin.Context, param shared.IntRequest) {
-	c.JSON(200, shared.IntResponse{Result: param.Value + 1})
+func incHandler(c *gin.Context, param types.IntRequest) {
+	c.JSON(200, types.IntResponse{Result: param.Value + 1})
 }
 
-func loginHandler(c *gin.Context, param shared.LoginRequest) {
+func loginHandler(c *gin.Context, param types.LoginRequest) {
 	token, err := store.GetTokenByUser(param.Username, param.Password)
 	if err != nil {
 		log.Println("login error:", err)
-		c.JSON(401, shared.LoginResponse{Error: "Invalid username or password"})
+		c.JSON(401, types.LoginResponse{Error: "Invalid username or password"})
 		return
 	}
-	c.JSON(200, shared.LoginResponse{Token: token})
+	c.JSON(200, types.LoginResponse{Token: token})
+}
+
+func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
+	remote := api_client.GetInstance()
+	request := types.GoogleTokenExchangeRequest{
+		Code:         param.Code,
+		ClientID:     store.GoogleClientID,
+		ClientSecret: store.GoogleClientSecret,
+		RedirectURI:  "http://localhost:8080/google-callback.html",
+		GrantType:    "authorization_code",
+	}
+
+	tokenExchangeResponse, err := api_client.CallEndpointTyped[types.GoogleTokenExchangeResponse](
+		remote, types.GoogleTokenExchangeEndpoint, request, api_client.NoOpRequestAugment,
+	)
+	if err != nil {
+		log.Println("google error:", err)
+		c.JSON(401, types.GoogleAuthResponse{Error: "Couldn't validate with Google"})
+		return
+	}
+
+	payload, err := idtoken.Validate(context.Background(), tokenExchangeResponse.IDToken, store.GoogleClientID)
+	if err != nil {
+		log.Println("ID token validation error:", err)
+		c.JSON(401, types.GoogleAuthResponse{Error: "Invalid ID token"})
+		return
+	}
+
+	// Extract user info from the token payload
+	email, _ := payload.Claims["email"].(string)
+	name, _ := payload.Claims["name"].(string)
+
+	// TODO: Create or update user in database, generate app token
+
+	c.JSON(200, types.GoogleAuthResponse{
+		Token: "test", // TODO: Generate actual app token
+		Email: email,
+		Name:  name,
+	})
 }

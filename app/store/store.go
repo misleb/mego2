@@ -5,7 +5,7 @@ package store
 import (
 	"github.com/gofred-io/gofred/hooks"
 	"github.com/gofred-io/gofred/listenable"
-	"github.com/misleb/mego2/shared"
+	"github.com/misleb/mego2/shared/types"
 )
 
 type Notifcation struct {
@@ -14,7 +14,7 @@ type Notifcation struct {
 }
 
 type AppStore struct {
-	User          *shared.User
+	User          *types.User
 	Theme         string
 	Notifications []Notifcation
 }
@@ -26,13 +26,13 @@ var (
 	})
 )
 
-func SetUser(user *shared.User) {
+func SetUser(user *types.User) {
 	store := appStore.Value()
 	store.User = user
 	setAppStore(store)
 }
 
-func GetUser() *shared.User {
+func GetUser() *types.User {
 	return appStore.Value().User
 }
 

@@ -16,7 +16,8 @@ import (
 	"github.com/misleb/mego2/app/client"
 	"github.com/misleb/mego2/app/components/basic/input"
 	"github.com/misleb/mego2/app/store"
-	"github.com/misleb/mego2/shared"
+	"github.com/misleb/mego2/shared/api_client"
+	"github.com/misleb/mego2/shared/types"
 )
 
 var (
@@ -40,6 +41,8 @@ func Get() application.BaseWidget {
 				passInput.BaseWidget,
 				spacer.New(spacer.Height(20)),
 				button.New(text.New("Login"), button.OnClick(doLogin)),
+				spacer.New(spacer.Height(10)),
+				button.New(text.New("Sign in with Google"), button.OnClick(doGoogleLogin)),
 			},
 		),
 		container.Padding(breakpoint.All(spacing.All(32))),
@@ -47,11 +50,42 @@ func Get() application.BaseWidget {
 }
 
 func doLogin(this application.BaseWidget, e application.Event) {
-	client := client.GetInstance()
-	result, err := client.Login(userInput.GetValue(), passInput.GetValue())
+	c := api_client.GetInstance()
+	result, err := c.Login(userInput.GetValue(), passInput.GetValue())
 	if err != nil {
 		console.Error(err.Error())
 		return
 	}
-	store.SetUser(&shared.User{Name: userInput.GetValue(), Token: result.Token})
+	store.SetUser(&types.User{Name: userInput.GetValue(), Token: result.Token})
+}
+
+func doGoogleLogin(this application.BaseWidget, e application.Event) {
+	// Get auth code from JavaScript
+	code, err := client.InitiateGoogleAuth()
+	if err != nil {
+		console.Error("Failed to initiate Google auth: " + err.Error())
+		return
+	}
+
+	// Send code to backend
+	apiClient := api_client.GetInstance()
+	request := types.GoogleAuthRequest{Code: code}
+	response, err := api_client.CallEndpointTyped[types.GoogleAuthResponse](
+		apiClient,
+		types.GoogleAuthEndpoint,
+		request,
+		api_client.NoOpRequestAugment,
+	)
+
+	if err != nil {
+		console.Error("Failed to authenticate with Google: " + err.Error())
+		return
+	}
+
+	// Store user
+	store.SetUser(&types.User{
+		Name:  response.Name,
+		Email: response.Email,
+		Token: response.Token,
+	})
 }
