@@ -35,7 +35,7 @@ func authRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("X-Auth-Token")
 
-		if user := store.GetUserByToken(token); user == nil {
+		if user := store.GetUserByToken(c.Request.Context(), token); user == nil {
 			c.JSON(401, types.LoginResponse{Error: "Unauthorized"})
 			c.Abort()
 			return

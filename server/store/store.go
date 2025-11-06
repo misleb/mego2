@@ -1,17 +1,20 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/misleb/mego2/shared/orm"
 	"github.com/misleb/mego2/shared/types"
 )
 
 var (
-	db                 *sql.DB
+	db                 *sqlx.DB
 	GoogleClientSecret = func() string {
 		secret, ok := os.LookupEnv("GOOGLE_CLIENT_SECRET")
 		if !ok {
@@ -33,16 +36,18 @@ var (
 		}
 		return id
 	}
+	databaseURL = func() string {
+		url, ok := os.LookupEnv("DATABASE_URL")
+		if !ok {
+			panic("DATABASE_URL is not set")
+		}
+		return url
+	}()
 )
 
 func InitDB() error {
-	databaseURL, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		return fmt.Errorf("no DATABASE_URL set")
-	}
-
 	var err error
-	db, err = sql.Open("postgres", databaseURL)
+	db, err = sqlx.Open("postgres", databaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -57,44 +62,71 @@ func CloseDB() error {
 	return nil
 }
 
-func GetUserByToken(token string) *types.User {
-	query := `SELECT users.name, users.email FROM users LEFT JOIN tokens ON users.id = tokens.user_id WHERE tokens.token = $1`
-
+func GetUserByToken(ctx context.Context, token string) *types.User {
 	var user types.User
 
-	err := db.QueryRow(query, token).Scan(&user.Name, &user.Email)
+	// err := orm.Find(&user).Join(&types.Token{}).Where(orm.AnyMap{"tokens.token = ?": token}).Query(ctx, db)
+	err := db.GetContext(ctx, &user, "SELECT * FROM users LEFT JOIN tokens ON users.id = tokens.user_id WHERE tokens.token = $1", token)
 	if err != nil {
 		return nil
 	}
 	return &user
 }
 
-func GetTokenByUser(name string, pass string) (string, error) {
-	user, err := fetchUserAndToken(name, pass)
+func GetTokenByNameAndPassword(ctx context.Context, name string, pass string) (string, error) {
+	user, err := fetchUserAndToken(ctx, name, pass)
 	if err == nil {
-		return user.Token, nil
+		return user.CurrentToken, nil
 	}
 	return "", err
 }
 
-func fetchUserAndToken(name string, pass string) (*types.User, error) {
-	uQuery := `SELECT id, email, name FROM users WHERE name = $1 AND crypt($2, password) = password`
-	tQuery := `INSERT INTO tokens (token, user_id) VALUES ($1, $2) RETURNING id`
-
+func fetchUserAndToken(ctx context.Context, name string, pass string) (*types.User, error) {
 	var user types.User
-	var id int32
 
-	if err := db.QueryRow(uQuery, name, pass).Scan(&id, &user.Email, &user.Name); err != nil {
+	scope := orm.Find(&user).Where(orm.AnyMap{
+		"name = ?":                      name,
+		"crypt(?, password) = password": pass,
+	})
+	if err := scope.Query(ctx, db); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	user.Token = uuid.New().String()
-
-	if err := db.QueryRow(tQuery, user.Token, id).Scan(&id); err != nil {
-		return nil, fmt.Errorf("could not create token: %w", err)
+	if err := setUserToken(ctx, &user); err != nil {
+		return nil, err
 	}
+
 	return &user, nil
+}
+
+// Used after successful Google authentication to find or create a user with a fresh token
+// Caller should prepopulate the user's email and name (from Google)
+func FindOrCreateUserByEmail(ctx context.Context, user *types.User) error {
+	scope := orm.Find(user).Where(orm.AnyMap{"email = ?": user.Email})
+	if err := scope.Query(ctx, db); err != nil {
+		if err == sql.ErrNoRows {
+			err := orm.Insert(user).Query(ctx, db)
+			if err != nil {
+				return fmt.Errorf("could not create user: %w", err)
+			}
+			return setUserToken(ctx, user)
+		}
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	return setUserToken(ctx, user)
+}
+
+func setUserToken(ctx context.Context, user *types.User) error {
+	user.CurrentToken = uuid.New().String()
+	token := &types.Token{
+		Token:  user.CurrentToken,
+		UserID: user.ID,
+	}
+	if err := orm.Insert(token).Query(ctx, db); err != nil {
+		return fmt.Errorf("could not create token: %w", err)
+	}
+	return nil
 }

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -28,12 +29,20 @@ func TestMain(m *testing.M) {
 }
 
 func setupTest(t *testing.T) func() {
+	_, err := db.ExecContext(context.Background(), "DELETE FROM tokens")
+	require.NoError(t, err)
+	_, err = db.ExecContext(context.Background(), "DELETE FROM users")
+	require.NoError(t, err)
 	query := `
 		INSERT INTO users (name, email, password) 
 		VALUES ($1, $2, crypt($3, gen_salt('bf')))
-		ON CONFLICT DO NOTHING
+		RETURNING id
 	`
-	_, err := db.Exec(query, "testuser", "test@example.com", "testpass")
+	var userID int
+	err = db.QueryRow(query, "testuser", "test@example.com", "testpass").Scan(&userID)
+	require.NoError(t, err)
+
+	_, err = db.ExecContext(context.Background(), "INSERT INTO tokens (token, user_id) VALUES ($1, $2)", "testtoken", userID)
 	require.NoError(t, err)
 
 	return func() {
@@ -41,41 +50,48 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-func TestGetTokenByUser(t *testing.T) {
+func TestGetTokenByNameAndPassword(t *testing.T) {
 	setupTest(t)
-	token, err := GetTokenByUser("testuser", "testpass")
+	token, err := GetTokenByNameAndPassword(context.Background(), "testuser", "testpass")
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
 }
 
-func TestGetTokenByUser_InvalidPassword(t *testing.T) {
+func TestGetTokenByNameAndPassword_InvalidPassword(t *testing.T) {
 	setupTest(t)
-	token, err := GetTokenByUser("testuser", "wrongpass")
+	token, err := GetTokenByNameAndPassword(context.Background(), "testuser", "wrongpass")
 
 	assert.Error(t, err)
 	assert.Empty(t, token)
 }
 
-func TestGetUserByToken(t *testing.T) {
+func TestFindOrCreateUserByEmail(t *testing.T) {
 	setupTest(t)
 	// First create a token
-	token, err := GetTokenByUser("testuser", "testpass")
+	token, err := GetTokenByNameAndPassword(context.Background(), "testuser", "testpass")
 	require.NoError(t, err)
 
 	// Then retrieve user by token
-	user := GetUserByToken(token)
+	user := GetUserByToken(context.Background(), token)
 
-	assert.NotNil(t, user)
+	require.NotNil(t, user)
 	assert.Equal(t, "testuser", user.Name)
 	assert.Equal(t, "test@example.com", user.Email)
 }
 
 func TestGetUserByToken_InvalidToken(t *testing.T) {
 	setupTest(t)
-	user := GetUserByToken("invalid-token")
+	user := GetUserByToken(context.Background(), "invalid-token")
 
-	// Current implementation returns empty user, not nil
-	assert.Equal(t, "", user.Name)
-	assert.Equal(t, "", user.Email)
+	assert.Nil(t, user)
+}
+
+func TestGetUserByToken_ValidToken(t *testing.T) {
+	setupTest(t)
+	user := GetUserByToken(context.Background(), "testtoken")
+
+	require.NotNil(t, user)
+	assert.Equal(t, "testuser", user.Name)
+	assert.Equal(t, "test@example.com", user.Email)
 }

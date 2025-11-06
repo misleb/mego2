@@ -9,10 +9,11 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
-	TestDB        *sql.DB
+	TestDB        *sqlx.DB
 	TestDBURL     string
 	dbInitialized bool
 )
@@ -32,7 +33,7 @@ func SetupTestDB(migrationsPath string) error {
 	os.Setenv("DATABASE_URL", TestDBURL)
 
 	var err error
-	TestDB, err = sql.Open("postgres", TestDBURL)
+	TestDB, err = sqlx.Open("postgres", TestDBURL)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func runMigrations(dbURL, migrationsPath string) error {
 }
 
 // CleanupData removes test data from all tables
-func CleanupData(t *testing.T, db *sql.DB) {
+func CleanupData(t *testing.T, db *sqlx.DB) {
 	// Clean in order respecting foreign keys
 	db.Exec("DELETE FROM tokens")
 	db.Exec("DELETE FROM users")

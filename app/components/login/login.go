@@ -56,7 +56,7 @@ func doLogin(this application.BaseWidget, e application.Event) {
 		console.Error(err.Error())
 		return
 	}
-	store.SetUser(&types.User{Name: userInput.GetValue(), Token: result.Token})
+	store.SetUser(&types.User{Name: userInput.GetValue(), CurrentToken: result.Token})
 }
 
 func doGoogleLogin(this application.BaseWidget, e application.Event) {
@@ -84,8 +84,8 @@ func doGoogleLogin(this application.BaseWidget, e application.Event) {
 
 	// Store user
 	store.SetUser(&types.User{
-		Name:  response.Name,
-		Email: response.Email,
-		Token: response.Token,
+		Name:         response.Name,
+		Email:        response.Email,
+		CurrentToken: response.Token,
 	})
 }

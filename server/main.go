@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"os"
@@ -10,8 +9,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/misleb/mego2/server/endpoint"
 	"github.com/misleb/mego2/server/store"
-	"github.com/misleb/mego2/shared/api_client"
 	"github.com/misleb/mego2/shared/types"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
 )
 
@@ -42,8 +42,6 @@ func main() {
 	if os.Getenv("ENV") != "production" {
 		go runWebSocketServer()
 	}
-
-	log.Printf("Database URL: %s", os.Getenv("DATABASE_URL"))
 
 	router.Run(":" + port)
 }
@@ -83,7 +81,7 @@ func incHandler(c *gin.Context, param types.IntRequest) {
 }
 
 func loginHandler(c *gin.Context, param types.LoginRequest) {
-	token, err := store.GetTokenByUser(param.Username, param.Password)
+	token, err := store.GetTokenByNameAndPassword(c.Request.Context(), param.Username, param.Password)
 	if err != nil {
 		log.Println("login error:", err)
 		c.JSON(401, types.LoginResponse{Error: "Invalid username or password"})
@@ -93,25 +91,30 @@ func loginHandler(c *gin.Context, param types.LoginRequest) {
 }
 
 func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
-	remote := api_client.GetInstance()
-	request := types.GoogleTokenExchangeRequest{
-		Code:         param.Code,
+	config := &oauth2.Config{
 		ClientID:     store.GoogleClientID,
 		ClientSecret: store.GoogleClientSecret,
-		RedirectURI:  store.BaseURI() + "/google-callback.html",
-		GrantType:    "authorization_code",
+		RedirectURL:  store.BaseURI() + "/google-callback.html",
+		Scopes:       []string{"openid", "profile", "email"},
+		Endpoint:     google.Endpoint,
 	}
 
-	tokenExchangeResponse, err := api_client.CallEndpointTyped[types.GoogleTokenExchangeResponse](
-		remote, types.GoogleTokenExchangeEndpoint, request, api_client.NoOpRequestAugment,
-	)
+	token, err := config.Exchange(c.Request.Context(), param.Code)
 	if err != nil {
-		log.Println("google error:", err)
+		log.Println("token exchange error:", err)
 		c.JSON(401, types.GoogleAuthResponse{Error: "Couldn't validate with Google"})
 		return
 	}
 
-	payload, err := idtoken.Validate(context.Background(), tokenExchangeResponse.IDToken, store.GoogleClientID)
+	// Extract ID token from the oauth2.Token
+	idToken, ok := token.Extra("id_token").(string)
+	if !ok {
+		log.Println("ID token not found in response")
+		c.JSON(401, types.GoogleAuthResponse{Error: "Invalid token response"})
+		return
+	}
+
+	payload, err := idtoken.Validate(c.Request.Context(), idToken, store.GoogleClientID)
 	if err != nil {
 		log.Println("ID token validation error:", err)
 		c.JSON(401, types.GoogleAuthResponse{Error: "Invalid ID token"})
@@ -122,10 +125,16 @@ func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
 	email, _ := payload.Claims["email"].(string)
 	name, _ := payload.Claims["name"].(string)
 
-	// TODO: Create or update user in database, generate app token
+	user := &types.User{Email: email, Name: name}
+	err = store.FindOrCreateUserByEmail(c.Request.Context(), user)
+	if err != nil {
+		log.Println("find or create user error:", err)
+		c.JSON(401, types.GoogleAuthResponse{Error: "Couldn't find or create user"})
+		return
+	}
 
 	c.JSON(200, types.GoogleAuthResponse{
-		Token: "test", // TODO: Generate actual app token
+		Token: user.CurrentToken,
 		Email: email,
 		Name:  name,
 	})
