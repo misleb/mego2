@@ -9,8 +9,8 @@ import (
 type Token struct {
 	ID        int
 	Token     string
-	UserID    int
-	CreatedAt time.Time
+	UserID    int       `db:"user_id"`
+	CreatedAt time.Time `db:"created_at"`
 }
 
 func (m *Token) TableName() string {
@@ -27,9 +27,9 @@ func (m *Token) ForeignKey() string {
 
 func (m *Token) Mapping() []*orm.Mapping {
 	return []*orm.Mapping{
-		{Column: "id", Result: &m.ID, Value: m.ID},
-		{Column: "token", Result: &m.Token, Value: m.Token},
-		{Column: "user_id", Result: &m.UserID, Value: m.UserID},
-		{Column: "created_at", Result: &m.CreatedAt, Value: m.CreatedAt},
+		{Column: "id"},
+		{Column: "token"},
+		{Column: "user_id"},
+		{Column: "created_at"},
 	}
 }

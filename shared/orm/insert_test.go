@@ -13,5 +13,5 @@ func TestInsertSQL(t *testing.T) {
 		Age:  30,
 	}
 	insert := Insert(user)
-	assert.Equal(t, "INSERT INTO test_table (name,age,password) VALUES ($1,$2,crypt($3, gen_salt('bf'))) RETURNING id", insert.SQL())
+	assert.Equal(t, "INSERT INTO test_table (name,age,password) VALUES (:name,:age,crypt(:password, gen_salt('bf'))) RETURNING id", insert.SQL())
 }

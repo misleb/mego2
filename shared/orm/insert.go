@@ -2,7 +2,7 @@ package orm
 
 import (
 	"context"
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -10,16 +10,27 @@ import (
 
 type InsertModel[T Model] struct {
 	dbCommon
-	model T
 }
 
 func Insert[T Model](model T) *InsertModel[T] {
-	return &InsertModel[T]{model: model, dbCommon: dbCommon{table: model.TableName()}}
+	return &InsertModel[T]{dbCommon: dbCommon{table: model.TableName(), model: model}}
 }
 
 func (i *InsertModel[T]) Query(ctx context.Context, db *sqlx.DB) error {
-	// We assume that the first mapping is the primary key. FIXME: This is a hack.
-	return db.QueryRowContext(ctx, i.SQL(), i.args...).Scan(i.model.Mapping()[0].Result)
+	rows, err := db.NamedQueryContext(ctx, i.SQL(), i.model)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		err := rows.StructScan(i.model)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return fmt.Errorf("no rows inserted")
+	}
 }
 
 func (i *InsertModel[T]) SQL() string {
@@ -28,26 +39,20 @@ func (i *InsertModel[T]) SQL() string {
 	sb.WriteString("INSERT INTO " + i.table)
 
 	mappings := i.model.Mapping()
-	i.args = []any{}
 	columns := []string{}
 	values := []string{}
-	count := 0
 
 	for _, mapping := range mappings {
 		if mapping.Column == i.model.PrimaryKey() {
 			continue
 		}
-		count = count + 1
 		columns = append(columns, mapping.Column)
+		namedArg := ":" + mapping.Column
 
-		numArg := "$" + strconv.Itoa(count)
 		if mapping.BeforeInsert != nil {
-			value, arg := mapping.BeforeInsert(numArg, mapping.Value)
-			i.args = append(i.args, arg)
-			values = append(values, value)
+			values = append(values, mapping.BeforeInsert(namedArg))
 		} else {
-			i.args = append(i.args, mapping.Value)
-			values = append(values, numArg)
+			values = append(values, namedArg)
 		}
 	}
 

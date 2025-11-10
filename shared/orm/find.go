@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -16,17 +17,16 @@ func Find(row Model) *FindModel {
 			table:      row.TableName(),
 			primaryKey: row.PrimaryKey(),
 			foreignKey: row.ForeignKey(),
+			model:      row,
 		}},
 	}
-	s.results = []any{}
 	s.columns = []string{}
 
 	for _, v := range row.Mapping() {
 		if v.NoSelect {
 			continue
 		}
-		s.columns = append(s.columns, row.TableName()+"."+v.Column)
-		s.results = append(s.results, v.Result)
+		s.columns = append(s.columns, s.table+"."+v.Column)
 	}
 	s.setT(s)
 	return s
@@ -37,5 +37,20 @@ func (d *FindModel) Query(ctx context.Context, db *sqlx.DB) error {
 		return d.err
 	}
 	sqlText := d.SQL()
-	return db.QueryRowContext(ctx, sqlText, d.args...).Scan(d.results...)
+	rows, err := db.NamedQueryContext(ctx, sqlText, d.using)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// We only expect one row.
+	if rows.Next() {
+		err = rows.StructScan(d.model)
+		if err != nil {
+			return err
+		}
+	} else {
+		return sql.ErrNoRows
+	}
+	return nil
 }

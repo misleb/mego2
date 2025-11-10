@@ -29,20 +29,18 @@ func TestMain(m *testing.M) {
 }
 
 func setupTest(t *testing.T) func() {
-	_, err := db.ExecContext(context.Background(), "DELETE FROM tokens")
-	require.NoError(t, err)
-	_, err = db.ExecContext(context.Background(), "DELETE FROM users")
-	require.NoError(t, err)
+	testutil.CleanupData(t, db)
 	query := `
 		INSERT INTO users (name, email, password) 
 		VALUES ($1, $2, crypt($3, gen_salt('bf')))
 		RETURNING id
 	`
 	var userID int
-	err = db.QueryRow(query, "testuser", "test@example.com", "testpass").Scan(&userID)
+	err := db.QueryRow(query, "testuser", "test@example.com", "testpass").Scan(&userID)
 	require.NoError(t, err)
 
-	_, err = db.ExecContext(context.Background(), "INSERT INTO tokens (token, user_id) VALUES ($1, $2)", "testtoken", userID)
+	var tokenID int
+	err = db.QueryRow("INSERT INTO tokens (token, user_id) VALUES ($1, $2) RETURNING id", "testtoken", userID).Scan(&tokenID)
 	require.NoError(t, err)
 
 	return func() {
@@ -73,25 +71,25 @@ func TestFindOrCreateUserByEmail(t *testing.T) {
 	require.NoError(t, err)
 
 	// Then retrieve user by token
-	user := GetUserByToken(context.Background(), token)
-
-	require.NotNil(t, user)
+	user, err := GetUserByToken(context.Background(), token)
+	require.NoError(t, err)
 	assert.Equal(t, "testuser", user.Name)
 	assert.Equal(t, "test@example.com", user.Email)
 }
 
 func TestGetUserByToken_InvalidToken(t *testing.T) {
 	setupTest(t)
-	user := GetUserByToken(context.Background(), "invalid-token")
+	user, err := GetUserByToken(context.Background(), "invalid-token")
 
 	assert.Nil(t, user)
+	assert.Error(t, err)
 }
 
 func TestGetUserByToken_ValidToken(t *testing.T) {
 	setupTest(t)
-	user := GetUserByToken(context.Background(), "testtoken")
+	user, err := GetUserByToken(context.Background(), "testtoken")
 
-	require.NotNil(t, user)
+	require.NoError(t, err)
 	assert.Equal(t, "testuser", user.Name)
 	assert.Equal(t, "test@example.com", user.Email)
 }

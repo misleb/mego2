@@ -2,21 +2,18 @@ package orm
 
 type dbCommon struct {
 	err        error
-	args       []any
 	columns    []string
 	table      string
 	primaryKey string
 	foreignKey string
+	model      Model
 }
 
 type AnyMap map[string]any
 type Mapping struct {
-	Column   string // Column name in the database
-	Result   any    // query result (pointer)
-	Value    any    // insert, update value
-	NoSelect bool   // Hide column from SELECT queries (used for passwords and tokens)
-
-	BeforeInsert func(value string, arg any) (string, any) // Modify value before inserting
+	Column       string                    // Column name in the database
+	NoSelect     bool                      // Hide column from SELECT queries (used for passwords and tokens)
+	BeforeInsert func(value string) string // Modify value before inserting
 }
 
 type Model interface {

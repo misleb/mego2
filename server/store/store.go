@@ -62,15 +62,14 @@ func CloseDB() error {
 	return nil
 }
 
-func GetUserByToken(ctx context.Context, token string) *types.User {
+func GetUserByToken(ctx context.Context, token string) (*types.User, error) {
 	var user types.User
+	tokenModel := &types.Token{Token: token}
 
-	// err := orm.Find(&user).Join(&types.Token{}).Where(orm.AnyMap{"tokens.token = ?": token}).Query(ctx, db)
-	err := db.GetContext(ctx, &user, "SELECT * FROM users LEFT JOIN tokens ON users.id = tokens.user_id WHERE tokens.token = $1", token)
-	if err != nil {
-		return nil
+	if err := orm.Find(&user).Join(tokenModel).Where("tokens.token = :token").Using(tokenModel).Query(ctx, db); err != nil {
+		return nil, err
 	}
-	return &user
+	return &user, nil
 }
 
 func GetTokenByNameAndPassword(ctx context.Context, name string, pass string) (string, error) {
@@ -82,12 +81,9 @@ func GetTokenByNameAndPassword(ctx context.Context, name string, pass string) (s
 }
 
 func fetchUserAndToken(ctx context.Context, name string, pass string) (*types.User, error) {
-	var user types.User
+	user := &types.User{Name: name, Password: pass}
 
-	scope := orm.Find(&user).Where(orm.AnyMap{
-		"name = ?":                      name,
-		"crypt(?, password) = password": pass,
-	})
+	scope := orm.Find(user).Where("name = :name AND crypt(:password, password) = password") // TODO: use sqlx to bind the password with a func
 	if err := scope.Query(ctx, db); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -95,19 +91,20 @@ func fetchUserAndToken(ctx context.Context, name string, pass string) (*types.Us
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	if err := setUserToken(ctx, &user); err != nil {
+	if err := setUserToken(ctx, user); err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 // Used after successful Google authentication to find or create a user with a fresh token
 // Caller should prepopulate the user's email and name (from Google)
 func FindOrCreateUserByEmail(ctx context.Context, user *types.User) error {
-	scope := orm.Find(user).Where(orm.AnyMap{"email = ?": user.Email})
+	scope := orm.Find(user).Where("email = :email")
 	if err := scope.Query(ctx, db); err != nil {
 		if err == sql.ErrNoRows {
+			user.Password = "test" // TODO: remove this
 			err := orm.Insert(user).Query(ctx, db)
 			if err != nil {
 				return fmt.Errorf("could not create user: %w", err)

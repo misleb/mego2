@@ -1,29 +1,34 @@
 package orm
 
 import (
-	"fmt"
 	"strings"
 )
 
 type selec[T any] struct {
 	dbCommon
-	t       *T
-	results []any
+	t *T
 
 	where []string
 	join  []Model
+	using Model // model to use for named queries 
 }
 
 func (d *selec[T]) setT(t *T) {
 	d.t = t
 }
 
-func (d *selec[T]) Where(where AnyMap) *T {
-	for k, v := range where {
-		num := len(d.args) + 1
-		d.where = append(d.where, strings.Replace(k, "?", fmt.Sprintf("$%d", num), 1))
-		d.args = append(d.args, v)
-	}
+func (d *selec[T]) Where(where string) *T {
+	d.where = append(d.where, where)
+	d.using = d.model
+	return d.t
+}
+
+// override the default model for named queries
+// this is useful when you want to use a different model for named queries
+// for example, when you want to use a different model for a join
+// or when you want to use a different model for a where clause
+func (d *selec[T]) Using(model Model) *T {
+	d.using = model
 	return d.t
 }
 

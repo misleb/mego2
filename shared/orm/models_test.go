@@ -22,17 +22,15 @@ func (m *TestModel) ForeignKey() string {
 
 func (m *TestModel) Mapping() []*Mapping {
 	return []*Mapping{
-		{Column: "id", Result: &m.ID, Value: m.ID},
-		{Column: "name", Result: &m.Name, Value: m.Name},
-		{Column: "age", Result: &m.Age, Value: m.Age},
+		{Column: "id"},
+		{Column: "name"},
+		{Column: "age"},
 		{
 			Column:   "password",
-			Result:   &m.Password,
-			Value:    m.Password,
 			NoSelect: true,
-			BeforeInsert: func(value string, arg any) (string, any) {
+			BeforeInsert: func(value string) string {
 				newValue := "crypt(" + value + ", gen_salt('bf'))"
-				return newValue, "test"
+				return newValue
 			},
 		},
 	}
@@ -58,8 +56,8 @@ func (m *TestJoinModel) ForeignKey() string {
 
 func (m *TestJoinModel) Mapping() []*Mapping {
 	return []*Mapping{
-		{Column: "id", Result: &m.ID, Value: m.ID},
-		{Column: "name", Result: &m.Name, Value: m.Name},
-		{Column: "age", Result: &m.Age, Value: m.Age},
+		{Column: "id"},
+		{Column: "name"},
+		{Column: "age"},
 	}
 }

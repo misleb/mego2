@@ -5,7 +5,7 @@ import "github.com/misleb/mego2/shared/orm"
 type User struct {
 	ID           int
 	Name         string
-	CurrentToken string // Not in DB table
+	CurrentToken string
 	Email        string
 	Password     string
 }
@@ -24,17 +24,15 @@ func (m *User) ForeignKey() string {
 
 func (m *User) Mapping() []*orm.Mapping {
 	return []*orm.Mapping{
-		{Column: "id", Result: &m.ID, Value: m.ID},
-		{Column: "name", Result: &m.Name, Value: m.Name},
-		{Column: "email", Result: &m.Email, Value: m.Email},
+		{Column: "id"},
+		{Column: "name"},
+		{Column: "email"},
 		{
 			Column:   "password",
-			Result:   &m.Password,
-			Value:    m.Password,
 			NoSelect: true,
-			BeforeInsert: func(value string, arg any) (string, any) {
+			BeforeInsert: func(value string) string {
 				newValue := "crypt(" + value + ", gen_salt('bf'))"
-				return newValue, "test"
+				return newValue
 			},
 		},
 	}
