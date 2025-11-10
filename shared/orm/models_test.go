@@ -32,6 +32,9 @@ func (m *TestModel) Mapping() []*Mapping {
 				newValue := "crypt(" + value + ", gen_salt('bf'))"
 				return newValue
 			},
+			BeforeFind: func(value string) string {
+				return "crypt(" + value + ", password)"
+			},
 		},
 	}
 }

@@ -22,7 +22,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
-	if err := store.InitDB(); err != nil {
+	if err := store.InitDB("./server/migrations"); err != nil {
 		log.Fatal("Failed to initialize db:", err)
 	}
 	defer store.CloseDB()
@@ -81,13 +81,13 @@ func incHandler(c *gin.Context, param types.IntRequest) {
 }
 
 func loginHandler(c *gin.Context, param types.LoginRequest) {
-	token, err := store.GetTokenByNameAndPassword(c.Request.Context(), param.Username, param.Password)
+	user, err := store.GetUserByEmailAndPassword(c.Request.Context(), param.Username, param.Password)
 	if err != nil {
 		log.Println("login error:", err)
 		c.JSON(401, types.LoginResponse{Error: "Invalid username or password"})
 		return
 	}
-	c.JSON(200, types.LoginResponse{Token: token})
+	c.JSON(200, types.LoginResponse{User: user})
 }
 
 func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
@@ -102,7 +102,7 @@ func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
 	token, err := config.Exchange(c.Request.Context(), param.Code)
 	if err != nil {
 		log.Println("token exchange error:", err)
-		c.JSON(401, types.GoogleAuthResponse{Error: "Couldn't validate with Google"})
+		c.JSON(401, types.LoginResponse{Error: "Couldn't validate with Google"})
 		return
 	}
 
@@ -110,14 +110,14 @@ func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
 	idToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		log.Println("ID token not found in response")
-		c.JSON(401, types.GoogleAuthResponse{Error: "Invalid token response"})
+		c.JSON(401, types.LoginResponse{Error: "Invalid token response"})
 		return
 	}
 
 	payload, err := idtoken.Validate(c.Request.Context(), idToken, store.GoogleClientID)
 	if err != nil {
 		log.Println("ID token validation error:", err)
-		c.JSON(401, types.GoogleAuthResponse{Error: "Invalid ID token"})
+		c.JSON(401, types.LoginResponse{Error: "Invalid ID token"})
 		return
 	}
 
@@ -129,13 +129,11 @@ func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
 	err = store.FindOrCreateUserByEmail(c.Request.Context(), user)
 	if err != nil {
 		log.Println("find or create user error:", err)
-		c.JSON(401, types.GoogleAuthResponse{Error: "Couldn't find or create user"})
+		c.JSON(401, types.LoginResponse{Error: "Couldn't find or create user"})
 		return
 	}
 
-	c.JSON(200, types.GoogleAuthResponse{
-		Token: user.CurrentToken,
-		Email: email,
-		Name:  name,
+	c.JSON(200, types.LoginResponse{
+		User: user,
 	})
 }

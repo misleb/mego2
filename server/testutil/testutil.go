@@ -20,7 +20,7 @@ var (
 
 // SetupTestDB initializes the test database and runs migrations
 // Call this from TestMain in each package that needs it
-func SetupTestDB(migrationsPath string) error {
+func SetupTestDB() error {
 	if dbInitialized {
 		return nil // Already set up
 	}
@@ -38,10 +38,6 @@ func SetupTestDB(migrationsPath string) error {
 		return err
 	}
 
-	if err := runMigrations(TestDBURL, migrationsPath); err != nil {
-		return err
-	}
-
 	dbInitialized = true
 	return nil
 }
@@ -52,7 +48,7 @@ func CleanupTestDB() {
 	}
 }
 
-func runMigrations(dbURL, migrationsPath string) error {
+func RunMigrations(dbURL, migrationsPath string) error {
 	migDB, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		return err

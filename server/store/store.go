@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/misleb/mego2/server/testutil"
 	"github.com/misleb/mego2/shared/orm"
 	"github.com/misleb/mego2/shared/types"
 )
@@ -45,8 +46,11 @@ var (
 	}()
 )
 
-func InitDB() error {
+func InitDB(migPath string) error {
 	var err error
+	if err := testutil.RunMigrations(databaseURL, migPath); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
 	db, err = sqlx.Open("postgres", databaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -72,18 +76,13 @@ func GetUserByToken(ctx context.Context, token string) (*types.User, error) {
 	return &user, nil
 }
 
-func GetTokenByNameAndPassword(ctx context.Context, name string, pass string) (string, error) {
-	user, err := fetchUserAndToken(ctx, name, pass)
-	if err == nil {
-		return user.CurrentToken, nil
-	}
-	return "", err
-}
+func GetUserByEmailAndPassword(ctx context.Context, email string, pass string) (*types.User, error) {
+	user := &types.User{Email: email, Password: pass}
 
-func fetchUserAndToken(ctx context.Context, name string, pass string) (*types.User, error) {
-	user := &types.User{Name: name, Password: pass}
-
-	scope := orm.Find(user).Where("name = :name AND crypt(:password, password) = password") // TODO: use sqlx to bind the password with a func
+	// NOTE: Password is not hashed here because it is already hashed in the database and the WHERE will be filtered by the User BeforeFind callback
+	// We are absolutely NOT storing the password in the database in plain text. This was an unnecessary abstraction, but fun to play with.
+	// :password will be substituted for a PG crypt function call.
+	scope := orm.Find(user).Where("email = :email AND password = :password")
 	if err := scope.Query(ctx, db); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

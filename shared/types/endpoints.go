@@ -24,19 +24,12 @@ var GoogleAuthEndpoint = Endpoint{
 	Path:         "/auth/google",
 	Method:       http.MethodPost,
 	RequestType:  GoogleAuthRequest{},
-	ResponseType: GoogleAuthResponse{},
+	ResponseType: LoginResponse{},
 	AuthRequired: false,
 }
 
 type GoogleAuthRequest struct {
 	Code string `json:"code"`
-}
-
-type GoogleAuthResponse struct {
-	Token string `json:"token"`
-	Error string `json:"error"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
 }
 
 type LoginRequest struct {
@@ -45,7 +38,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
+	User  *User  `json:"user"`
 	Error string `json:"error"`
 }
 

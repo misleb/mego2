@@ -56,7 +56,7 @@ func doLogin(this application.BaseWidget, e application.Event) {
 		console.Error(err.Error())
 		return
 	}
-	store.SetUser(&types.User{Name: userInput.GetValue(), CurrentToken: result.Token})
+	store.SetUser(result.User)
 }
 
 func doGoogleLogin(this application.BaseWidget, e application.Event) {
@@ -70,7 +70,7 @@ func doGoogleLogin(this application.BaseWidget, e application.Event) {
 	// Send code to backend
 	apiClient := api_client.GetInstance()
 	request := types.GoogleAuthRequest{Code: code}
-	response, err := api_client.CallEndpointTyped[types.GoogleAuthResponse](
+	response, err := api_client.CallEndpointTyped[types.LoginResponse](
 		apiClient,
 		types.GoogleAuthEndpoint,
 		request,
@@ -83,9 +83,5 @@ func doGoogleLogin(this application.BaseWidget, e application.Event) {
 	}
 
 	// Store user
-	store.SetUser(&types.User{
-		Name:         response.Name,
-		Email:        response.Email,
-		CurrentToken: response.Token,
-	})
+	store.SetUser(response.User)
 }

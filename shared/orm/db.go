@@ -14,6 +14,7 @@ type Mapping struct {
 	Column       string                    // Column name in the database
 	NoSelect     bool                      // Hide column from SELECT queries (used for passwords and tokens)
 	BeforeInsert func(value string) string // Modify value before inserting
+	BeforeFind   func(value string) string // Modify value before finding
 }
 
 type Model interface {

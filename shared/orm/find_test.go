@@ -39,9 +39,9 @@ func TestFind_GeneratesCorrectSQL_WithoutWhere(t *testing.T) {
 func TestFind_GeneratesCorrectSQL_WithWhere(t *testing.T) {
 	model := &TestModel{}
 	find := Find(model)
-	find.Where("name = :name")
+	find.Where("name = :name AND password = :password")
 
-	expectedSQL := "SELECT test_table.id,test_table.name,test_table.age FROM test_table WHERE name = :name"
+	expectedSQL := "SELECT test_table.id,test_table.name,test_table.age FROM test_table WHERE name = :name AND password = crypt(:password, password)"
 	actualSQL := find.SQL()
 
 	assert.Equal(t, expectedSQL, actualSQL)

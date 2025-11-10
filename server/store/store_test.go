@@ -11,12 +11,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if err := testutil.SetupTestDB("../migrations"); err != nil {
+	if err := testutil.SetupTestDB(); err != nil {
 		panic(err)
 	}
 
 	// Initialize your store with the test DB
-	if err := InitDB(); err != nil {
+	if err := InitDB("../migrations"); err != nil {
 		panic(err)
 	}
 
@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 func setupTest(t *testing.T) func() {
 	testutil.CleanupData(t, db)
 	query := `
-		INSERT INTO users (name, email, password) 
+		INSERT INTO users (name, email, password)
 		VALUES ($1, $2, crypt($3, gen_salt('bf')))
 		RETURNING id
 	`
@@ -48,30 +48,30 @@ func setupTest(t *testing.T) func() {
 	}
 }
 
-func TestGetTokenByNameAndPassword(t *testing.T) {
+func TestGetUserByEmailAndPassword(t *testing.T) {
 	setupTest(t)
-	token, err := GetTokenByNameAndPassword(context.Background(), "testuser", "testpass")
+	user, err := GetUserByEmailAndPassword(context.Background(), "test@example.com", "testpass")
 
 	assert.NoError(t, err)
-	assert.NotEmpty(t, token)
+	assert.NotEmpty(t, user)
 }
 
 func TestGetTokenByNameAndPassword_InvalidPassword(t *testing.T) {
 	setupTest(t)
-	token, err := GetTokenByNameAndPassword(context.Background(), "testuser", "wrongpass")
+	user, err := GetUserByEmailAndPassword(context.Background(), "test@example.com", "wrongpass")
 
 	assert.Error(t, err)
-	assert.Empty(t, token)
+	assert.Empty(t, user)
 }
 
 func TestFindOrCreateUserByEmail(t *testing.T) {
 	setupTest(t)
 	// First create a token
-	token, err := GetTokenByNameAndPassword(context.Background(), "testuser", "testpass")
+	user, err := GetUserByEmailAndPassword(context.Background(), "test@example.com", "testpass")
 	require.NoError(t, err)
 
 	// Then retrieve user by token
-	user, err := GetUserByToken(context.Background(), token)
+	user, err = GetUserByToken(context.Background(), user.CurrentToken)
 	require.NoError(t, err)
 	assert.Equal(t, "testuser", user.Name)
 	assert.Equal(t, "test@example.com", user.Email)

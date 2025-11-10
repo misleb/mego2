@@ -10,7 +10,7 @@ type selec[T any] struct {
 
 	where []string
 	join  []Model
-	using Model // model to use for named queries 
+	using Model // model to use for named queries
 }
 
 func (d *selec[T]) setT(t *T) {
@@ -18,6 +18,12 @@ func (d *selec[T]) setT(t *T) {
 }
 
 func (d *selec[T]) Where(where string) *T {
+	for _, mapping := range d.model.Mapping() {
+		if mapping.BeforeFind != nil {
+			namedArgKey := ":" + mapping.Column
+			where = strings.ReplaceAll(where, namedArgKey, mapping.BeforeFind(namedArgKey))
+		}
+	}
 	d.where = append(d.where, where)
 	d.using = d.model
 	return d.t
