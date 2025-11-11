@@ -103,11 +103,12 @@ func FindOrCreateUserByEmail(ctx context.Context, user *types.User) error {
 	scope := orm.Find(user).Where("email = :email")
 	if err := scope.Query(ctx, db); err != nil {
 		if err == sql.ErrNoRows {
-			user.Password = "test" // TODO: remove this
+			user.Password = uuid.New().String() // Random password for new users. This is not a secure password, but it is a temporary password.
 			err := orm.Insert(user).Query(ctx, db)
 			if err != nil {
 				return fmt.Errorf("could not create user: %w", err)
 			}
+			user.SetPassword = true
 			return setUserToken(ctx, user)
 		}
 		return fmt.Errorf("failed to get user: %w", err)
@@ -125,4 +126,8 @@ func setUserToken(ctx context.Context, user *types.User) error {
 		return fmt.Errorf("could not create token: %w", err)
 	}
 	return nil
+}
+
+func UpdateUser(ctx context.Context, user *types.User, columns []string) error {
+	return orm.Update(user).Set(columns).Query(ctx, db)
 }

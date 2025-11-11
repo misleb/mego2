@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/misleb/mego2/server/testutil"
+	"github.com/misleb/mego2/shared/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -64,17 +65,28 @@ func TestGetTokenByNameAndPassword_InvalidPassword(t *testing.T) {
 	assert.Empty(t, user)
 }
 
-func TestFindOrCreateUserByEmail(t *testing.T) {
+func TestFindOrCreateUserByEmail_ExistingUser(t *testing.T) {
 	setupTest(t)
-	// First create a token
-	user, err := GetUserByEmailAndPassword(context.Background(), "test@example.com", "testpass")
-	require.NoError(t, err)
-
-	// Then retrieve user by token
-	user, err = GetUserByToken(context.Background(), user.CurrentToken)
+	user := &types.User{Email: "test@example.com"}
+	err := FindOrCreateUserByEmail(context.Background(), user)
 	require.NoError(t, err)
 	assert.Equal(t, "testuser", user.Name)
 	assert.Equal(t, "test@example.com", user.Email)
+	assert.False(t, user.SetPassword)
+}
+
+func TestFindOrCreateUserByEmail_NewUser(t *testing.T) {
+	setupTest(t)
+	user := &types.User{Email: "notfound@example.com", Name: "testuser2"}
+	err := FindOrCreateUserByEmail(context.Background(), user)
+	require.NoError(t, err)
+	assert.Equal(t, "testuser2", user.Name)
+	assert.Equal(t, "notfound@example.com", user.Email)
+	assert.True(t, user.SetPassword)
+
+	// then test that the password is not set to blank (that would be bad)
+	_, err = GetUserByEmailAndPassword(context.Background(), "notfound@example.com", "")
+	assert.Error(t, err)
 }
 
 func TestGetUserByToken_InvalidToken(t *testing.T) {
@@ -92,4 +104,28 @@ func TestGetUserByToken_ValidToken(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "testuser", user.Name)
 	assert.Equal(t, "test@example.com", user.Email)
+}
+
+func TestUpdateUser(t *testing.T) {
+	cleanup := setupTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	user, err := GetUserByEmailAndPassword(ctx, "test@example.com", "testpass")
+	require.NoError(t, err)
+	require.NotNil(t, user)
+
+	user.Password = "newpass"
+	err = UpdateUser(ctx, user, []string{"password"})
+	require.NoError(t, err)
+
+	// Old password should no longer work
+	_, err = GetUserByEmailAndPassword(ctx, "test@example.com", "testpass")
+	assert.Error(t, err)
+
+	// New password should authenticate successfully
+	updatedUser, err := GetUserByEmailAndPassword(ctx, "test@example.com", "newpass")
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, updatedUser.ID)
 }

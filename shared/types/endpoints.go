@@ -28,6 +28,21 @@ var GoogleAuthEndpoint = Endpoint{
 	AuthRequired: false,
 }
 
+var UpdateSelfEndpoint = Endpoint{
+	Path:         "/user",
+	Method:       http.MethodPut,
+	RequestType:  UpdateSelfRequest{},
+	ResponseType: LoginResponse{},
+	AuthRequired: true,
+}
+
+type UpdateSelfRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+	Name        string `json:"name"`
+	Error       string `json:"error"`
+}
+
 type GoogleAuthRequest struct {
 	Code string `json:"code"`
 }

@@ -20,8 +20,8 @@ func (m *TestModel) ForeignKey() string {
 	return "test_id"
 }
 
-func (m *TestModel) Mapping() []*Mapping {
-	return []*Mapping{
+func (m *TestModel) Mapping() MappingSlice {
+	return MappingSlice{
 		{Column: "id"},
 		{Column: "name"},
 		{Column: "age"},
@@ -57,8 +57,8 @@ func (m *TestJoinModel) ForeignKey() string {
 	return "test_join_id"
 }
 
-func (m *TestJoinModel) Mapping() []*Mapping {
-	return []*Mapping{
+func (m *TestJoinModel) Mapping() MappingSlice {
+	return MappingSlice{
 		{Column: "id"},
 		{Column: "name"},
 		{Column: "age"},

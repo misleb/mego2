@@ -15,6 +15,15 @@ The application is currently deployed and accessible at:
 - `shared/` - Shared types and utilities
 - `web/` - Static web assets
 
+## Roadmap
+
+- [ ] Allow Google users to set a local password
+- [ ] Create a DB column "type" and enforce based on mappings for a model when using orm.Update (prevent invalid column names at compile time)
+- [ ] Allow anyone to change password or name
+- [ ] Enforce password strength frontend and backend
+- [ ] Expand test coverage for shared packages
+- [ ] Implement admin dashboard for managing content
+
 ## Development
 
 See the `Makefile` for available build and development commands.

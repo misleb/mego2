@@ -3,6 +3,7 @@ module github.com/misleb/mego2
 go 1.25.1
 
 require (
+	cloud.google.com/go/auth v0.17.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gofred-io/gofred v0.0.6
 	github.com/golang-migrate/migrate/v4 v4.19.0
@@ -12,14 +13,11 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.32.0
-	google.golang.org/api v0.254.0
 )
 
 // +heroku install ./server
 
 require (
-	cloud.google.com/go/auth v0.17.0 // indirect
-	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.1 // indirect
