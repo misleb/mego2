@@ -17,8 +17,8 @@ The application is currently deployed and accessible at:
 
 ## Roadmap
 
-- [ ] Allow Google users to set a local password
-- [ ] Create a DB column "type" and enforce based on mappings for a model when using orm.Update (prevent invalid column names at compile time)
+- [x] Allow Google users to set a local password
+- [x] Create a DB column "type" and use constants for valid column names (avoid invalid SQL whenever possible)
 - [ ] Allow anyone to change password or name
 - [ ] Enforce password strength frontend and backend
 - [ ] Expand test coverage for shared packages

@@ -2,6 +2,16 @@ package types
 
 import "github.com/misleb/mego2/shared/orm"
 
+type UserColumn string
+
+const (
+	UserColID            UserColumn = "id"
+	UserColName          UserColumn = "name"
+	UserColEmail         UserColumn = "email"
+	UserColIsNewExternal UserColumn = "is_new_external"
+	UserColPassword      UserColumn = "password"
+)
+
 type User struct {
 	ID            int
 	Name          string
@@ -25,13 +35,13 @@ func (m *User) ForeignKey() string {
 }
 
 func (m *User) Mapping() orm.MappingSlice {
-	return []*orm.Mapping{
-		{Column: "id"},
-		{Column: "name"},
-		{Column: "email"},
-		{Column: "is_new_external"},
+	return orm.MappingSlice{
+		{Column: string(UserColID)},
+		{Column: string(UserColName)},
+		{Column: string(UserColEmail)},
+		{Column: string(UserColIsNewExternal)},
 		{
-			Column:   "password",
+			Column:   string(UserColPassword),
 			NoSelect: true,
 			BeforeInsert: func(value string) string {
 				newValue := "crypt(" + value + ", gen_salt('bf'))"

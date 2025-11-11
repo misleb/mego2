@@ -68,7 +68,6 @@ func googleAuthHandler(c *gin.Context, param types.GoogleAuthRequest) {
 		c.JSON(401, types.LoginResponse{Error: "Couldn't find or create user"})
 		return
 	}
-
 	c.JSON(200, types.LoginResponse{
 		User: user,
 	})
@@ -96,7 +95,7 @@ func updateSelfHandler(c *gin.Context, param types.UpdateSelfRequest) {
 	}
 
 	// TODO: Support more than password update
-	if err := store.UpdateUser(c.Request.Context(), user, []string{"password"}); err != nil {
+	if err := store.UpdateUser(c.Request.Context(), user, []types.UserColumn{types.UserColPassword}); err != nil {
 		c.JSON(500, types.LoginResponse{Error: err.Error()})
 		return
 	} else {

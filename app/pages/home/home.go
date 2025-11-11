@@ -7,6 +7,7 @@ import (
 	"github.com/gofred-io/gofred/foundation/column"
 	"github.com/gofred-io/gofred/foundation/router"
 	"github.com/gofred-io/gofred/listenable"
+	"github.com/misleb/mego2/app/components/account"
 	"github.com/misleb/mego2/app/components/counter"
 	"github.com/misleb/mego2/app/components/header"
 	"github.com/misleb/mego2/app/components/login"
@@ -18,10 +19,13 @@ func New(params router.RouteParams) application.BaseWidget {
 		[]application.BaseWidget{
 			header.Get(),
 			listenable.Builder(store.AppStoreListenable(), func() application.BaseWidget {
-				if store.GetUser() != nil {
-					return counter.Get()
-				} else {
+				user := store.GetUser()
+				if user == nil {
 					return login.Get()
+				} else if user.SetPassword {
+					return account.Get()
+				} else {
+					return counter.Get()
 				}
 			}),
 		},

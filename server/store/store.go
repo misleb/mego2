@@ -104,11 +104,12 @@ func FindOrCreateUserByEmail(ctx context.Context, user *types.User) error {
 	if err := scope.Query(ctx, db); err != nil {
 		if err == sql.ErrNoRows {
 			user.Password = uuid.New().String() // Random password for new users. This is not a secure password, but it is a temporary password.
+			user.IsNewExternal = true
+			user.SetPassword = true
 			err := orm.Insert(user).Query(ctx, db)
 			if err != nil {
 				return fmt.Errorf("could not create user: %w", err)
 			}
-			user.SetPassword = true
 			return setUserToken(ctx, user)
 		}
 		return fmt.Errorf("failed to get user: %w", err)
@@ -128,6 +129,16 @@ func setUserToken(ctx context.Context, user *types.User) error {
 	return nil
 }
 
-func UpdateUser(ctx context.Context, user *types.User, columns []string) error {
-	return orm.Update(user).Set(columns).Query(ctx, db)
+func UpdateUser(ctx context.Context, user *types.User, columns []types.UserColumn) error {
+	return orm.Update(user).Set(convertUserColumnsToStrings(columns)).Query(ctx, db)
+}
+
+// This is a helper function to convert the UserColumn enum to a string slice for the UpdateModel
+// This isn't strictly necessary, but it helps to enforce that the columns are valid for the User model at compile time.
+func convertUserColumnsToStrings(columns []types.UserColumn) []string {
+	columnStrings := make([]string, len(columns))
+	for i, column := range columns {
+		columnStrings[i] = string(column)
+	}
+	return columnStrings
 }

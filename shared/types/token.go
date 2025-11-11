@@ -26,7 +26,7 @@ func (m *Token) ForeignKey() string {
 }
 
 func (m *Token) Mapping() orm.MappingSlice {
-	return []*orm.Mapping{
+	return orm.MappingSlice{
 		{Column: "id"},
 		{Column: "token"},
 		{Column: "user_id"},

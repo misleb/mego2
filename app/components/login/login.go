@@ -11,7 +11,6 @@ import (
 	"github.com/gofred-io/gofred/foundation/container"
 	"github.com/gofred-io/gofred/foundation/spacer"
 	"github.com/gofred-io/gofred/foundation/text"
-	"github.com/gofred-io/gofred/hooks"
 	"github.com/gofred-io/gofred/options/spacing"
 	"github.com/misleb/mego2/app/client"
 	"github.com/misleb/mego2/app/components/basic/input"
@@ -21,9 +20,8 @@ import (
 )
 
 var (
-	IsLoggedIn, SetLoggedIn = hooks.UseState(false)
-	userInput               *input.Input
-	passInput               *input.Input
+	userInput *input.Input
+	passInput *input.Input
 )
 
 func Get() application.BaseWidget {

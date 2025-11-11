@@ -117,7 +117,7 @@ func TestUpdateUser(t *testing.T) {
 	require.NotNil(t, user)
 
 	user.Password = "newpass"
-	err = UpdateUser(ctx, user, []string{"password"})
+	err = UpdateUser(ctx, user, []types.UserColumn{types.UserColPassword})
 	require.NoError(t, err)
 
 	// Old password should no longer work
