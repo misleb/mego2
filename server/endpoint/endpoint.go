@@ -10,14 +10,14 @@ import (
 )
 
 // Generic endpoint registration function
-func RegisterEndpoint(router *gin.Engine, endpoint types.Endpoint, handler interface{}) {
+func RegisterEndpoint(router *gin.Engine, endpoint types.Endpoint, handler interface{}, d *store.DB) {
 	var handlerFuncs []gin.HandlerFunc
 
 	if endpoint.AuthRequired {
-		handlerFuncs = append(handlerFuncs, authRequired())
+		handlerFuncs = append(handlerFuncs, authRequired(d))
 	}
 
-	handlerFuncs = append(handlerFuncs, createHandler(endpoint, handler))
+	handlerFuncs = append(handlerFuncs, createHandler(endpoint, handler, d))
 
 	switch endpoint.Method {
 	case http.MethodGet:
@@ -31,11 +31,11 @@ func RegisterEndpoint(router *gin.Engine, endpoint types.Endpoint, handler inter
 	}
 }
 
-func authRequired() gin.HandlerFunc {
+func authRequired(d *store.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("X-Auth-Token")
 
-		user, err := store.GetUserByToken(c.Request.Context(), token)
+		user, err := d.GetUserByToken(c.Request.Context(), token)
 		if err != nil {
 			c.JSON(401, types.LoginResponse{Error: "Unauthorized"})
 			c.Abort()
@@ -46,7 +46,7 @@ func authRequired() gin.HandlerFunc {
 	}
 }
 
-func createHandler(endpoint types.Endpoint, handler interface{}) gin.HandlerFunc {
+func createHandler(endpoint types.Endpoint, handler interface{}, d *store.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Create a new instance of the request type
 		requestType := reflect.TypeOf(endpoint.RequestType)
@@ -71,6 +71,7 @@ func createHandler(endpoint types.Endpoint, handler interface{}) gin.HandlerFunc
 		handlerValue.Call([]reflect.Value{
 			reflect.ValueOf(c),
 			reflect.ValueOf(requestValue).Elem(),
+			reflect.ValueOf(d),
 		})
 	}
 }

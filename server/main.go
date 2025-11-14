@@ -19,17 +19,18 @@ var upgrader = websocket.Upgrader{
 }
 
 func main() {
-	if err := store.InitDB("./server/migrations"); err != nil {
+	db, err := store.InitDB()
+	if err != nil {
 		log.Fatal("Failed to initialize db:", err)
 	}
-	defer store.CloseDB()
+	defer db.Close()
 
 	router := gin.Default()
 
-	endpoint.RegisterEndpoint(router, types.IncEndpoint, incHandler)
-	endpoint.RegisterEndpoint(router, types.LoginEndpoint, loginHandler)
-	endpoint.RegisterEndpoint(router, types.GoogleAuthEndpoint, googleAuthHandler)
-	endpoint.RegisterEndpoint(router, types.UpdateSelfEndpoint, updateSelfHandler)
+	endpoint.RegisterEndpoint(router, types.IncEndpoint, incHandler, db)
+	endpoint.RegisterEndpoint(router, types.LoginEndpoint, loginHandler, db)
+	endpoint.RegisterEndpoint(router, types.GoogleAuthEndpoint, googleAuthHandler, db)
+	endpoint.RegisterEndpoint(router, types.UpdateSelfEndpoint, updateSelfHandler, db)
 	router.NoRoute(gin.WrapH(http.FileServer(http.Dir("./web"))))
 
 	port, ok := os.LookupEnv("PORT")

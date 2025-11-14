@@ -1,7 +1,10 @@
-.PHONY: build run clean wasm server air
+.PHONY: build run clean wasm server air cmd
 
 # Build all components
-build: wasm air
+build: wasm air cmd
+
+cmd:
+	go build -o cmd ./cmd
 
 # Build WASM frontend
 wasm:
@@ -29,6 +32,9 @@ clean:
 migrate-up:
 	@DATABASE_URL=$$(heroku config:get DATABASE_URL); \
 	migrate -path server/migrations -database $$DATABASE_URL up
+
+migrate-test-up:
+	migrate -path server/migrations -database postgresql://mego2:mego2_dev@localhost:5432/mego2_test?sslmode=disable up
 
 migrate-down:
 	@DATABASE_URL=$$(heroku config:get DATABASE_URL); \
