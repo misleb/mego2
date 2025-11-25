@@ -4,7 +4,7 @@
 build: wasm air cmd
 
 cmd:
-	go build -o cmd ./cmd
+	go build -o bin/cmd ./cmd
 
 # Build WASM frontend
 wasm:
