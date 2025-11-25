@@ -4,14 +4,6 @@ import (
 	"net/http"
 )
 
-var GenericIncEndpoint = GenericEndpoint[IntRequest, IntResponse]{
-	Path:         "/inc/:value",
-	Method:       http.MethodGet,
-	RequestType:  IntRequest{},
-	ResponseType: IntResponse{},
-	AuthRequired: true,
-}
-
 var IncEndpoint = Endpoint{
 	Path:         "/inc/:value",
 	Method:       http.MethodGet,
@@ -79,13 +71,5 @@ type Endpoint struct {
 	Method       string
 	RequestType  interface{}
 	ResponseType interface{}
-	AuthRequired bool
-}
-
-type GenericEndpoint[Req any, Resp any] struct {
-	Path         string
-	Method       string
-	RequestType  Req
-	ResponseType Resp
 	AuthRequired bool
 }

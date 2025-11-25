@@ -1,6 +1,8 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +20,9 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+//go:embed web/*
+var webFS embed.FS
+
 func main() {
 	db, err := store.InitDB()
 	if err != nil {
@@ -25,13 +30,18 @@ func main() {
 	}
 	defer db.Close()
 
+	webContent, err := fs.Sub(webFS, "web")
+	if err != nil {
+		log.Fatal("Failed to get web content:", err)
+	}
+
 	router := gin.Default()
 
 	endpoint.RegisterEndpoint(router, types.IncEndpoint, incHandler, db)
 	endpoint.RegisterEndpoint(router, types.LoginEndpoint, loginHandler, db)
 	endpoint.RegisterEndpoint(router, types.GoogleAuthEndpoint, googleAuthHandler, db)
 	endpoint.RegisterEndpoint(router, types.UpdateSelfEndpoint, updateSelfHandler, db)
-	router.NoRoute(gin.WrapH(http.FileServer(http.Dir("./web"))))
+	router.NoRoute(gin.WrapH(http.FileServer(http.FS(webContent))))
 
 	port, ok := os.LookupEnv("PORT")
 	if !ok {
