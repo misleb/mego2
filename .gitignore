@@ -1,4 +1,5 @@
 server/server
 tmp/
 cmd/cmd
-
+*.wasm
+*.log
