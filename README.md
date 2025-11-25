@@ -20,6 +20,7 @@ The application is currently deployed and accessible at:
 - [x] Allow Google users to set a local password
 - [x] Create a DB column "type" and use constants for valid column names (avoid invalid SQL whenever possible)
 - [x] Remove automatic migrations on tests and server startup. It's just too slow.
+- [x] Embed web files (particularly main.wasm) in the server binary
 - [ ] Client should decide if user.SetPassword = true, not the server
 - [ ] Allow anyone to change password or name
 - [ ] Enforce password strength frontend and backend

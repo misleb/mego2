@@ -8,7 +8,7 @@ cmd:
 
 # Build WASM frontend
 wasm:
-	GOOS=js GOARCH=wasm go build -o web/main.wasm ./app
+	GOOS=js GOARCH=wasm go build -o server/web/main.wasm ./app
 
 # Build server
 server:
