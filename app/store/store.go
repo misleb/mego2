@@ -17,6 +17,7 @@ type AppStore struct {
 	User          *types.User
 	Theme         string
 	Notifications []Notifcation
+	AuthToken     string
 }
 
 var (
@@ -29,6 +30,9 @@ var (
 func SetUser(user *types.User) {
 	store := appStore.Value()
 	store.User = user
+	if user.CurrentToken != "" {
+		store.AuthToken = user.CurrentToken
+	}
 	setAppStore(store)
 }
 
@@ -38,4 +42,8 @@ func GetUser() *types.User {
 
 func AppStoreListenable() listenable.Listenable[AppStore] {
 	return appStore
+}
+
+func GetAuthToken() string {
+	return appStore.Value().AuthToken
 }

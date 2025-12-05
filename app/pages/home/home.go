@@ -22,7 +22,7 @@ func New(params router.RouteParams) application.BaseWidget {
 				user := store.GetUser()
 				if user == nil {
 					return login.Get()
-				} else if user.SetPassword {
+				} else if user.IsNewExternal {
 					return account.Get()
 				} else {
 					return counter.Get()

@@ -109,7 +109,6 @@ func (d *DB) FindOrCreateUserByEmail(ctx context.Context, user *types.User) erro
 		if err == sql.ErrNoRows {
 			user.Password = uuid.New().String() // Random password for new users. This is not a secure password, but it is a temporary password.
 			user.IsNewExternal = true
-			user.SetPassword = true
 			err := orm.Insert(user).Query(ctx, d.db)
 			if err != nil {
 				return fmt.Errorf("could not create user: %w", err)

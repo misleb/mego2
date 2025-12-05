@@ -94,8 +94,8 @@ func updateSelfHandler(c *gin.Context, param types.UpdateSelfRequest, d *store.D
 		}
 	}
 
-	// TODO: Support more than password update
-	if err := d.UpdateUser(c.Request.Context(), user, []types.UserColumn{types.UserColPassword}); err != nil {
+	// TODO: Support more than password and is_new_external update
+	if err := d.UpdateUser(c.Request.Context(), user, []types.UserColumn{types.UserColPassword, types.UserColIsNewExternal}); err != nil {
 		c.JSON(500, types.LoginResponse{Error: err.Error()})
 		return
 	} else {

@@ -12,7 +12,7 @@ import (
 
 var AddAuthHeader = func(req *http.Request) error {
 	if user := store.GetUser(); user != nil {
-		req.Header.Add("X-Auth-Token", user.CurrentToken)
+		req.Header.Add("X-Auth-Token", store.GetAuthToken())
 		return nil
 	} else {
 		return fmt.Errorf("no user to get token from")
